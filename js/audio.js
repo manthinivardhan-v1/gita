@@ -238,6 +238,52 @@
       }
     },
 
+    /* ---- recorded narration: one <audio> element routed through Web Audio
+       so the cosmos can breathe with the voice ---- */
+    initVoice() {
+      if (this.vEl) return;
+      const el = this.vEl = new Audio();
+      el.preload = 'auto';
+      if (this.ctx && this.ctx.createMediaElementSource) {
+        const src = this.ctx.createMediaElementSource(el);
+        this.vAn = this.ctx.createAnalyser(); this.vAn.fftSize = 256; this.vAn.smoothingTimeConstant = 0.5;
+        this.vBuf = new Uint8Array(this.vAn.fftSize);
+        const sink = this.ctx.createGain(); sink.gain.value = 0;
+        src.connect(this.ctx.destination); src.connect(this.vAn); this.vAn.connect(sink); sink.connect(this.ctx.destination);
+      }
+    },
+    unlockVoice(url) {
+      this.initVoice();
+      const el = this.vEl; el.muted = true; el.src = url;
+      const p = el.play(); if (p) p.then(() => { el.pause(); el.muted = false; }).catch(() => { el.muted = false; });
+    },
+    // resolves 'ended' | 'error' | 'stopped'
+    playVoice(url, volume, onProgress) {
+      this.initVoice();
+      this.stopVoice();
+      const el = this.vEl;
+      return new Promise(res => {
+        let settled = false;
+        const done = r => { if (settled) return; settled = true; el.onended = el.onerror = el.ontimeupdate = null; this._stop = null; this.speaking(false); res(r); };
+        this._stop = () => done('stopped');
+        el.onended = () => done('ended');
+        el.onerror = () => done('error');
+        el.ontimeupdate = () => { if (onProgress && el.duration) onProgress(el.currentTime / el.duration); };
+        el.muted = false; el.volume = volume; el.src = url; el.playbackRate = this.vRate || 1;
+        this.speaking(true);
+        const p = el.play();
+        if (p) p.catch(e => done(e && e.name === 'AbortError' ? 'stopped' : 'error'));
+      });
+    },
+    stopVoice() { if (this.vEl) { this.vEl.pause(); } if (this._stop) this._stop(); },
+    setVoiceVolume(v) { if (this.vEl) this.vEl.volume = v; },
+    voiceLevel() {
+      if (!this.vAn || !this.vEl || this.vEl.paused) return 0;
+      this.vAn.getByteTimeDomainData(this.vBuf);
+      let s = 0; for (let i = 0; i < this.vBuf.length; i++) { const d = (this.vBuf[i] - 128) / 128; s += d * d; }
+      return Math.min(1, Math.sqrt(s / this.vBuf.length) * 4);
+    },
+
     level() {
       if (!this.analyser) return 0;
       this.analyser.getByteFrequencyData(this.fft);

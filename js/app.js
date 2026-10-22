@@ -8,7 +8,7 @@
   const seg = (text, lang) => window.Intl && Intl.Segmenter ? [...new Intl.Segmenter(lang, { granularity: 'grapheme' }).segment(text)].map(s => s.segment) : [...text];
 
   /* ---------------- settings ---------------- */
-  const defaults = { mode: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'gentle' : 'cosmic', voice: 'en', rate: 0.92, vol: 0.7, vvol: 1, hindi: true, translit: true, auto: true, muted: false, calm: false };
+  const defaults = { engine: 'recorded', mode: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'gentle' : 'cosmic', voice: 'en', rate: 0.92, vol: 0.7, vvol: 1, hindi: true, translit: true, auto: true, muted: false, calm: false };
   let S = { ...defaults };
   try { Object.assign(S, JSON.parse(localStorage.getItem('vishwaroop.settings') || '{}')); } catch (e) {}
   const save = () => { try { localStorage.setItem('vishwaroop.settings', JSON.stringify(S)); } catch (e) {} };
@@ -67,7 +67,7 @@
       }
       Nada.speaking(false);
     },
-    stop() { if (synth) synth.cancel(); Nada.speaking(false); },
+    stop() { if (synth) synth.cancel(); Nada.stopVoice(); Nada.speaking(false); },
   };
   if (synth) { Voice.load(); synth.onvoiceschanged = () => Voice.load(); }
 
@@ -107,6 +107,7 @@
     el.innerHTML = '';
     const flat = text.replace(/\s+/g, ' ').trim();
     const words = flat.split(' '); let off = 0;
+    el.dataset.len = flat.length;
     const step = Math.min(40, 2600 / words.length);
     words.forEach((w, i) => {
       const s = document.createElement('span'); s.className = 'w'; s.textContent = w; s.dataset.s = off;
@@ -210,6 +211,16 @@
     if (state.playing) narrate(gen);
   }
 
+  // speak one line: the pre-rendered divine voice first, the device voice as fallback
+  async function say(gen, key, lang, text, ttsLang, pitch, el) {
+    if (S.engine !== 'device') {
+      const len = el ? +el.dataset.len || 0 : 0;
+      const r = await Nada.playVoice(`audio/${lang}/${key}.mp3`, S.vvol, f => el && highlight(el, f * len * 1.04));
+      if (r !== 'error' || gen !== state.gen) return;
+    }
+    await Voice.speak(text, ttsLang, gen, pitch, el ? c => highlight(el, c) : null);
+  }
+
   async function narrate(gen) {
     const st = steps[state.i];
     const mode = S.voice;
@@ -217,27 +228,32 @@
     let chars = 0;
     if (st.t === 'pro' || st.t === 'end') {
       const p = st.t === 'pro' ? PROLOGUE[st.i] : EPILOGUE;
+      const key = st.t === 'pro' ? 'p-' + (st.i + 1) : 'end';
       chars = p.text.length;
-      if (mode !== 'off') { await sleep(1200); if (gen !== state.gen) return; await Voice.speak(p.title + '. ' + p.text, 'en', gen, 0.95); }
+      if (mode !== 'off') {
+        await sleep(1200); if (gen !== state.gen) return;
+        await say(gen, key, mode === 'hi' ? 'hi' : 'en', p.title + '. ' + p.text, 'en', 0.95);
+      }
     } else if (st.t === 'chap') {
       const c = DATA.chapters[st.ch - 1];
       chars = 120;
       await sleep(2200); if (gen !== state.gen) return;
-      if (mode === 'hi') await Voice.speak(`अध्याय ${st.ch}. ${c.sa}.`, 'hi', gen, 0.95);
-      else if (mode !== 'off') await Voice.speak(`Chapter ${st.ch}. ${c.en}. ${c.meaning}.`, 'en', gen, 0.95);
+      if (mode === 'hi' || mode === 'sa') await say(gen, 'c-' + st.ch, 'hi', `अध्याय ${st.ch}. ${c.sa}.`, 'hi', 0.95);
+      else if (mode !== 'off') await say(gen, 'c-' + st.ch, 'en', `Chapter ${st.ch}. ${c.en}. ${c.meaning}.`, 'en', 0.95);
     } else if (st.t === 'verse') {
-      const [, , spk, sa, , en, hi] = DATA.verses[st.idx];
+      const [ch, v, spk, sa, , en, hi] = DATA.verses[st.idx];
+      const key = `v-${ch}-${v}`;
       const pitch = spk === 'K' ? 0.88 : spk === 'A' ? 1.02 : 1.08;
       chars = en.length;
       await sleep(900); if (gen !== state.gen) return;
       const engEl = $('#english');
-      if (mode === 'en') await Voice.speak(en, 'en', gen, pitch, c => highlight(engEl, c));
-      else if (mode === 'hi') await Voice.speak(hi, 'hi', gen, pitch);
+      if (mode === 'en') await say(gen, key, 'en', en, 'en', pitch, engEl);
+      else if (mode === 'hi') await say(gen, key, 'hi', hi, 'hi', pitch);
       else if (mode === 'sa') {
-        await Voice.speak(sa.replace(/।/g, ','), 'hi', gen, pitch * 0.95);
+        await say(gen, key, 'sa', sa.replace(/।/g, ','), 'hi', pitch * 0.95);
         if (gen !== state.gen) return;
-        await sleep(400);
-        await Voice.speak(en, 'en', gen, pitch, c => highlight(engEl, c));
+        await sleep(500);
+        await say(gen, key, 'en', en, 'en', pitch, engEl);
       }
     }
     if (gen !== state.gen) return;
@@ -440,9 +456,11 @@
     $('#set-hindi').checked = S.hindi; $('#set-translit').checked = S.translit; $('#set-auto').checked = S.auto;
     sm.onchange = () => { if (sm.value === 'transcendent' && !confirm('Transcendent mode contains rapid flashing and strobing. Continue?')) { sm.value = S.mode; return; } setMode(sm.value); };
     sv.onchange = () => { S.voice = sv.value; save(); if (state.playing) narrate(++state.gen); };
-    $('#set-rate').oninput = e => { S.rate = +e.target.value; save(); };
+    Nada.vRate = S.rate / 0.92;
+    $('#set-rate').oninput = e => { S.rate = +e.target.value; save(); Nada.vRate = S.rate / 0.92; };
     $('#set-vol').oninput = e => { S.vol = +e.target.value; save(); Nada.setVolume(S.vol); };
-    $('#set-vvol').oninput = e => { S.vvol = +e.target.value; save(); };
+    $('#set-vvol').oninput = e => { S.vvol = +e.target.value; save(); Nada.setVoiceVolume(S.vvol); };
+    const se = $('#set-engine'); se.value = S.engine; se.onchange = () => { S.engine = se.value; save(); if (state.playing) narrate(++state.gen); };
     $('#set-hindi').onchange = e => { S.hindi = e.target.checked; save(); $('#hindi').classList.toggle('hidden', !S.hindi); };
     $('#set-translit').onchange = e => { S.translit = e.target.checked; save(); const st = steps[state.i]; if (st.t === 'verse') { $('#translit').textContent = S.translit ? DATA.verses[st.idx][4] : ''; $('#translit').classList.toggle('hidden', !S.translit); } };
     $('#set-auto').onchange = e => { S.auto = e.target.checked; save(); };
@@ -466,7 +484,7 @@
       setMode(mode);
       S.voice = $('#gate-voice').value; save();
       $('#set-voice').value = S.voice;
-      Nada.start(); Nada.setVolume(S.vol); if (S.muted) { Nada.setMuted(true); $('#btn-sound').classList.add('off'); }
+      Nada.start(); Nada.setVolume(S.vol); Nada.unlockVoice('audio/en/p-1.mp3'); if (S.muted) { Nada.setMuted(true); $('#btn-sound').classList.add('off'); }
       // unlock speech on iOS with an empty utterance inside the gesture
       if (synth) { try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } catch (e) {} }
       $('#gate').classList.add('hidden');
@@ -486,7 +504,8 @@
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     const lvl = Nada.level();
     const pulse = 0.5 + 0.5 * Math.sin(now / 1000 * Math.PI * 2 * 0.25); // a slow cosmic heartbeat
-    const beat = S.calm ? 0 : Math.min(1, lvl * 1.6 * 0.6 + pulse * 0.25);
+    const vl = Nada.voiceLevel();
+    const beat = S.calm ? 0 : Math.min(1, lvl * 1.6 * 0.6 + pulse * 0.25 + vl * 0.55);
     Cosmos.target.beat = beat;
     Cosmos.frame(now, dt);
     Maya.frame(now, dt, S.calm ? 0 : beat * 0.4, Cosmos.params.vis);

@@ -154,13 +154,16 @@
   <label class="row">Narration
     <select id="set-voice"><option value="en">English</option><option value="hi">हिन्दी</option><option value="sa">संस्कृत + English</option><option value="off">Silent</option></select>
   </label>
+  <label class="row">Voice
+    <select id="set-engine"><option value="recorded">Divine voices (recorded)</option><option value="device">Device voice</option></select>
+  </label>
   <label class="row">Speech pace <input type="range" id="set-rate" min="0.6" max="1.4" step="0.05" value="0.92"></label>
   <label class="row">Cosmic sound <input type="range" id="set-vol" min="0" max="1" step="0.01" value="0.7"></label>
   <label class="row">Voice volume <input type="range" id="set-vvol" min="0" max="1" step="0.01" value="1"></label>
   <label class="row check"><input type="checkbox" id="set-hindi" checked> Show Hindi translation</label>
   <label class="row check"><input type="checkbox" id="set-translit" checked> Show transliteration</label>
   <label class="row check"><input type="checkbox" id="set-auto" checked> Auto-advance verses</label>
-  <p class="credits">Sanskrit, transliteration & translations (Shri Purohit Swami, Swami Tejomayananda) from the open <a href="https://github.com/gita/gita" target="_blank" rel="noopener">gita/gita</a> dataset. All visuals and sound are generated live in your browser.</p>
+  <p class="credits">Sanskrit, transliteration & translations (Shri Purohit Swami, Swami Tejomayananda) from the open <a href="https://github.com/gita/gita" target="_blank" rel="noopener">gita/gita</a> dataset. Narration voices rendered with <a href="https://github.com/rhasspy/piper" target="_blank" rel="noopener">Piper</a> neural TTS (voices: Pratham — AI4Bharat, CC BY-NC-SA 4.0; Northern English Male — CC BY-SA 4.0; Ryan — CC BY-NC-SA 4.0). All visuals and music are generated live in your browser.</p>
 </aside>
 
 <div id="help" class="panel help" aria-hidden="true">
