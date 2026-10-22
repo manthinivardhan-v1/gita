@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vishwaroop — The Cosmic Gita</title>
+<meta name="description" content="A psychedelic, cosmic journey through all 700 verses of the Bhagavad Gita — Krishna's song to Arjuna on the field of Kurukshetra, and the vision of the Universal Form.">
+<meta name="theme-color" content="#05010f">
+<meta property="og:title" content="Vishwaroop — The Cosmic Gita">
+<meta property="og:description" content="All 700 ślokas of the Bhagavad Gita, narrated inside a living cosmos.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕉</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&family=Tiro+Devanagari+Hindi&family=Tiro+Devanagari+Sanskrit:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="gl" aria-hidden="true"></canvas>
+<div id="blocks" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div id="strobe" aria-hidden="true"></div>
+<div id="grain" aria-hidden="true"></div>
+
+<!-- LOADER -->
+<div id="loader" class="screen">
+  <div class="loader-yantra">
+    <svg viewBox="0 0 200 200"><g fill="none" stroke="currentColor" stroke-width="0.8">
+      <circle cx="100" cy="100" r="90"/><circle cx="100" cy="100" r="70"/>
+      <polygon points="100,20 169,140 31,140"/><polygon points="100,180 31,60 169,60"/>
+      <circle cx="100" cy="100" r="30"/></g></svg>
+    <span>ॐ</span>
+  </div>
+  <p id="loader-text">Gathering the cosmos…</p>
+</div>
+
+<!-- GATE -->
+<div id="gate" class="screen hidden">
+  <div class="gate-inner">
+    <p class="eyebrow">श्रीमद्भगवद्गीता</p>
+    <h1 class="title"><span>V</span><span>I</span><span>S</span><span>H</span><span>W</span><span>A</span><span>R</span><span>O</span><span>O</span><span>P</span></h1>
+    <p class="subtitle">The Song of God, sung across the cosmos — all 700 ślokas, from the field of Kurukshetra to the vision of the Universal Form.</p>
+
+    <div class="warning" role="alert">
+      <strong>⚠ Photosensitivity warning</strong>
+      <p>This experience contains intense colour, rapid motion and — in <em>Transcendent</em> mode — flashing and strobing image blocks that may trigger seizures for people with photosensitive epilepsy. Press <kbd>Esc</kbd> at any time to instantly calm the visuals.</p>
+    </div>
+
+    <fieldset class="modes">
+      <legend>Choose your intensity</legend>
+      <label class="mode"><input type="radio" name="mode" value="gentle"><span><b>Gentle</b><i>Flowing cosmos. No flashes.</i></span></label>
+      <label class="mode"><input type="radio" name="mode" value="cosmic" checked><span><b>Cosmic</b><i>Vivid & psychedelic. Soft pulses, no strobe.</i></span></label>
+      <label class="mode danger"><input type="radio" name="mode" value="transcendent"><span><b>Transcendent</b><i>Full strobe & flashing blocks. Photosensitive.</i></span></label>
+    </fieldset>
+
+    <div class="gate-row">
+      <label class="select">Narration
+        <select id="gate-voice">
+          <option value="en">English voice</option>
+          <option value="hi">हिन्दी स्वर</option>
+          <option value="sa">संस्कृत + English</option>
+          <option value="off">Silent (text only)</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="gate-actions">
+      <button class="btn primary" data-start="prologue"><span>Enter Kurukshetra</span></button>
+      <button class="btn" data-start="ch1">Begin at Chapter 1</button>
+      <button class="btn vis" data-start="vishwa">Witness the Vishwaroop</button>
+    </div>
+    <p class="hint">Best with headphones · <kbd>Space</kbd> play/pause · <kbd>←</kbd><kbd>→</kbd> verses · <kbd>?</kbd> all shortcuts</p>
+  </div>
+</div>
+
+<!-- STAGE -->
+<main id="stage" class="hidden" aria-live="polite">
+  <div id="bigword" aria-hidden="true"></div>
+
+  <section id="card" class="card">
+    <div id="speaker" class="speaker"></div>
+    <div id="sanskrit" class="sanskrit" lang="sa"></div>
+    <div id="translit" class="translit"></div>
+    <div id="english" class="english"></div>
+    <div id="hindi" class="hindi" lang="hi"></div>
+    <div id="refline" class="refline"></div>
+    <div id="meanings" class="meanings hidden"></div>
+  </section>
+
+  <section id="chapter-card" class="chapter-card hidden">
+    <p class="ch-num"></p>
+    <h2 class="ch-sa" lang="sa"></h2>
+    <h3 class="ch-en"></h3>
+    <p class="ch-meaning"></p>
+    <p class="ch-summary"></p>
+  </section>
+
+  <section id="story-card" class="story-card hidden">
+    <p class="story-kicker"></p>
+    <h2 class="story-title"></h2>
+    <p class="story-text"></p>
+  </section>
+</main>
+
+<!-- HUD -->
+<header id="top" class="hud hidden">
+  <button class="brand" id="open-drawer" aria-label="Open chapters"><span class="brand-om">ॐ</span><span class="brand-name">VISHWAROOP</span></button>
+  <div class="now" id="now"></div>
+  <div class="top-actions">
+    <button class="icon" id="btn-words" title="Word meanings (W)" aria-label="Word meanings">पद</button>
+    <button class="icon" id="btn-sound" title="Cosmic sound (M)" aria-label="Toggle sound"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+    <button class="icon" id="btn-settings" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="1.6"/></svg></button>
+    <button class="icon" id="btn-full" title="Fullscreen (F)" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
+  </div>
+</header>
+
+<footer id="transport" class="hud hidden">
+  <div id="timeline" class="timeline" role="slider" aria-label="Position in the Gita" tabindex="0">
+    <div id="tl-segs" class="tl-segs"></div>
+    <div id="tl-head" class="tl-head"></div>
+    <div id="tl-tip" class="tl-tip"></div>
+  </div>
+  <div class="controls">
+    <div class="ctl-left"><span id="counter" class="counter"></span></div>
+    <div class="ctl-mid">
+      <button class="icon" id="btn-prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button class="icon play" id="btn-play" aria-label="Play"><svg class="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></button>
+      <button class="icon" id="btn-next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+    </div>
+    <div class="ctl-right">
+      <button class="pill" id="btn-vishwa" title="Jump to the Vishwaroop (V)">विश्वरूप</button>
+      <button class="pill calm" id="btn-calm" title="Calm visuals (Esc)">Calm</button>
+    </div>
+  </div>
+</footer>
+
+<!-- DRAWER -->
+<aside id="drawer" class="drawer" aria-hidden="true">
+  <div class="drawer-head">
+    <h2>Eighteen Yogas</h2>
+    <button class="icon" id="close-drawer" aria-label="Close">✕</button>
+  </div>
+  <button class="drawer-pro" id="go-prologue">✦ Prologue — The Field of Kurukshetra</button>
+  <ol id="chapters" class="chapters"></ol>
+  <div id="verse-grid" class="verse-grid"></div>
+</aside>
+
+<!-- SETTINGS -->
+<aside id="settings" class="panel" aria-hidden="true">
+  <div class="drawer-head"><h2>Settings</h2><button class="icon" id="close-settings" aria-label="Close">✕</button></div>
+  <label class="row">Intensity
+    <select id="set-mode"><option value="gentle">Gentle</option><option value="cosmic">Cosmic</option><option value="transcendent">Transcendent ⚠</option></select>
+  </label>
+  <label class="row">Narration
+    <select id="set-voice"><option value="en">English</option><option value="hi">हिन्दी</option><option value="sa">संस्कृत + English</option><option value="off">Silent</option></select>
+  </label>
+  <label class="row">Speech pace <input type="range" id="set-rate" min="0.6" max="1.4" step="0.05" value="0.92"></label>
+  <label class="row">Cosmic sound <input type="range" id="set-vol" min="0" max="1" step="0.01" value="0.7"></label>
+  <label class="row">Voice volume <input type="range" id="set-vvol" min="0" max="1" step="0.01" value="1"></label>
+  <label class="row check"><input type="checkbox" id="set-hindi" checked> Show Hindi translation</label>
+  <label class="row check"><input type="checkbox" id="set-translit" checked> Show transliteration</label>
+  <label class="row check"><input type="checkbox" id="set-auto" checked> Auto-advance verses</label>
+  <p class="credits">Sanskrit, transliteration & translations (Shri Purohit Swami, Swami Tejomayananda) from the open <a href="https://github.com/gita/gita" target="_blank" rel="noopener">gita/gita</a> dataset. All visuals and sound are generated live in your browser.</p>
+</aside>
+
+<div id="help" class="panel help" aria-hidden="true">
+  <div class="drawer-head"><h2>Shortcuts</h2><button class="icon" id="close-help" aria-label="Close">✕</button></div>
+  <dl>
+    <dt><kbd>Space</kbd></dt><dd>Play / pause</dd>
+    <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Previous / next</dd>
+    <dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Previous / next chapter</dd>
+    <dt><kbd>C</kbd></dt><dd>Chapters</dd>
+    <dt><kbd>V</kbd></dt><dd>Vishwaroop</dd>
+    <dt><kbd>W</kbd></dt><dd>Word meanings</dd>
+    <dt><kbd>M</kbd></dt><dd>Mute cosmic sound</dd>
+    <dt><kbd>F</kbd></dt><dd>Fullscreen</dd>
+    <dt><kbd>Esc</kbd></dt><dd>Calm visuals instantly</dd>
+  </dl>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="js/shader.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/story.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
